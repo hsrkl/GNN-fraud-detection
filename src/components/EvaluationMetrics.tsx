@@ -49,7 +49,7 @@ const FEATURE_IMPORTANCE_DATA = [
 ];
 
 export default function EvaluationMetrics() {
-  const [threshold, setThreshold] = useState(0.5);
+  const [threshold, setThreshold] = useState(0.25);
 
   const calcSimulatedMetrics = (t: number) => {
     const recall = Math.min(0.995, Math.max(0.75, 0.9412 + (0.5 - t) * 0.25));

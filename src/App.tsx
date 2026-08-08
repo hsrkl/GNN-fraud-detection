@@ -1,70 +1,80 @@
-import { useState, useCallback, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useCallback } from 'react';
+import { AnimatePresence } from 'framer-motion';
 import Header, { PageTab } from './components/Header';
 import InputPage from './components/InputPage';
 import ResultsPage from './components/ResultsPage';
 import EvaluationMetrics from './components/EvaluationMetrics';
 
+export type ChipType = 'Swipe Transaction' | 'Chip Transaction' | 'Online Transaction';
+export type ErrorType = 'No error' | 'Bad CVV' | 'Bad PIN' | 'Insufficient Balance' | 'Bad Expiration';
+
 type AuditStatus = 'idle' | 'loading' | 'safe' | 'fraud';
+
+export interface ApiResult {
+  probability: number;
+  is_fraud: boolean;
+  threshold: number;
+  customer_known: boolean;
+  merchant_known: boolean;
+}
 
 export default function App() {
   // Page Navigation state
   const [activeTab, setActiveTab] = useState<PageTab>('input');
 
-  // Transaction parameters
-  const [transactionType, setTransactionType] = useState<'TRANSFER' | 'CASH_OUT'>('TRANSFER');
-  const [amount, setAmount] = useState(25000);
-  const [senderOldBalance, setSenderOldBalance] = useState(100000);
-  const [senderNewBalance, setSenderNewBalance] = useState(75000);
-  const [receiverOldBalance, setReceiverOldBalance] = useState(50000);
-  const [receiverNewBalance, setReceiverNewBalance] = useState(75000);
-  const [hour, setHour] = useState(14);
+  // API configuration
+  const [apiUrl, setApiUrl] = useState('');
+
+  // Transaction parameters — matches main.py payload
+  const [user, setUser] = useState(876);
+  const [card, setCard] = useState(1);
+  const [year, setYear] = useState(2024);
+  const [month, setMonth] = useState(6);
+  const [day, setDay] = useState(15);
+  const [time, setTime] = useState('03:40');
+  const [amount, setAmount] = useState('$2100.00');
+  const [merchantName, setMerchantName] = useState('2814378089490887845');
+  const [mcc, setMcc] = useState(5999);
+  const [useChip, setUseChip] = useState<ChipType>('Online Transaction');
+  const [errors, setErrors] = useState<ErrorType>('Bad CVV');
 
   // Audit state
   const [status, setStatus] = useState<AuditStatus>('idle');
-  const [riskScore, setRiskScore] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [hasAuditResult, setHasAuditResult] = useState(false);
-
-  // Auto-calculate sender new balance when amount or sender old balance changes
-  useEffect(() => {
-    const calculated = Math.max(0, senderOldBalance - amount);
-    setSenderNewBalance(calculated);
-  }, [amount, senderOldBalance]);
-
-  // Auto-calculate receiver new balance
-  useEffect(() => {
-    if (transactionType === 'CASH_OUT') {
-      setReceiverOldBalance(0);
-      setReceiverNewBalance(0);
-    } else {
-      setReceiverNewBalance(receiverOldBalance + amount);
-    }
-  }, [amount, receiverOldBalance, transactionType]);
-
-  // Balance discrepancy calculation (errorBalanceOrig feature)
-  const balanceDiscrepancy = senderOldBalance - senderNewBalance - amount;
+  const [apiResult, setApiResult] = useState<ApiResult | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
 
   const performAudit = useCallback(async () => {
+    if (!apiUrl.trim()) {
+      setApiError('Please enter an API URL first.');
+      return;
+    }
+
     setIsLoading(true);
     setStatus('loading');
+    setApiError(null);
 
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentDay = now.getDate();
-    const currentYear = now.getFullYear();
+    // Artificial delay to prevent a flashing blank screen
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     const payload = {
-      amount: Number(amount),
-      hour: Number(hour),
-      month: currentMonth,
-      day: currentDay,
-      year: currentYear,
-      chipType: 'Online',
+      User: Number(user),
+      Card: Number(card),
+      Year: Number(year),
+      Month: Number(month),
+      Day: Number(day),
+      Time: time,
+      Amount: amount,
+      'Merchant Name': Number(merchantName),
+      MCC: Number(mcc),
+      'Use Chip': useChip,
+      'Errors?': errors,
     };
 
     try {
-      const response = await fetch('https://dime-heap-down.ngrok-free.dev/predict', {
+      const baseUrl = apiUrl.replace(/\/+$/, '');
+      const response = await fetch(`${baseUrl}/predict`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,47 +84,54 @@ export default function App() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const data = await response.json();
       console.log('Prediction backend response:', data);
 
-      const isFraud = Boolean(
-        data.is_fraud === true ||
-        data.is_fraud === 1 ||
-        data.fraud === true ||
-        data.fraud === 1 ||
-        (data.risk_score !== undefined && data.risk_score > 0.5)
-      );
+      const CLASSIFIER_THRESHOLD = 0.25;
+      const thresholdVal = CLASSIFIER_THRESHOLD;
+      const isFraudResult = data.probability !== undefined ? data.probability >= CLASSIFIER_THRESHOLD : Boolean(data.is_fraud);
 
-      let score = 0;
-      if (typeof data.risk_score === 'number') {
-        score = data.risk_score <= 1 ? Math.round(data.risk_score * 100) : Math.round(data.risk_score);
-      } else {
-        score = isFraud ? 94 : 12;
-      }
+      const result: ApiResult = {
+        probability: data.probability,
+        is_fraud: isFraudResult,
+        threshold: thresholdVal,
+        customer_known: data.customer_known,
+        merchant_known: data.merchant_known,
+      };
 
-      setRiskScore(score);
-      setStatus(isFraud ? 'fraud' : 'safe');
+      setApiResult(result);
+      setStatus(isFraudResult ? 'fraud' : 'safe');
     } catch (error) {
       console.error('Failed to get prediction from backend:', error);
+      setApiError(error instanceof Error ? error.message : 'Unknown error');
 
-      // Fallback calculation in case of network issue
+      // Fallback heuristic for demo purposes
+      const amountNum = parseFloat(amount.replace(/[^0-9.]/g, '')) || 0;
       const isHighRisk =
-        amount > 200000 ||
-        (transactionType === 'CASH_OUT' && senderOldBalance === amount) ||
-        Math.abs(balanceDiscrepancy) > 10000;
-      const mockScore = isHighRisk ? 96 : Math.min(85, Math.max(12, Math.round((amount / 10000) * 5)));
+        amountNum > 500 ||
+        useChip === 'Online Transaction' ||
+        errors !== 'No error';
 
-      setRiskScore(mockScore);
-      setStatus(mockScore > 50 ? 'fraud' : 'safe');
+      const CLASSIFIER_THRESHOLD = 0.25;
+      const fallback: ApiResult = {
+        probability: isHighRisk ? 0.87 : 0.12,
+        is_fraud: isHighRisk,
+        threshold: CLASSIFIER_THRESHOLD,
+        customer_known: user < 10000,
+        merchant_known: true,
+      };
+
+      setApiResult(fallback);
+      setStatus(isHighRisk ? 'fraud' : 'safe');
     } finally {
       setIsLoading(false);
       setHasAuditResult(true);
       setActiveTab('results');
     }
-  }, [amount, hour, transactionType, senderOldBalance, balanceDiscrepancy]);
+  }, [apiUrl, user, card, year, month, day, time, amount, merchantName, mcc, useChip, errors]);
 
   return (
     <div className="min-h-screen bg-[#F7F4EE] text-[#2C2A29]">
@@ -152,22 +169,33 @@ export default function App() {
           {activeTab === 'input' && (
             <InputPage
               key="input-page"
-              transactionType={transactionType}
-              setTransactionType={setTransactionType}
+              apiUrl={apiUrl}
+              setApiUrl={setApiUrl}
+              user={user}
+              setUser={setUser}
+              card={card}
+              setCard={setCard}
+              year={year}
+              setYear={setYear}
+              month={month}
+              setMonth={setMonth}
+              day={day}
+              setDay={setDay}
+              time={time}
+              setTime={setTime}
               amount={amount}
               setAmount={setAmount}
-              senderOldBalance={senderOldBalance}
-              setSenderOldBalance={setSenderOldBalance}
-              senderNewBalance={senderNewBalance}
-              setSenderNewBalance={setSenderNewBalance}
-              receiverOldBalance={receiverOldBalance}
-              setReceiverOldBalance={setReceiverOldBalance}
-              receiverNewBalance={receiverNewBalance}
-              setReceiverNewBalance={setReceiverNewBalance}
-              hour={hour}
-              setHour={setHour}
+              merchantName={merchantName}
+              setMerchantName={setMerchantName}
+              mcc={mcc}
+              setMcc={setMcc}
+              useChip={useChip}
+              setUseChip={setUseChip}
+              errors={errors}
+              setErrors={setErrors}
               onAudit={performAudit}
               isLoading={isLoading}
+              apiError={apiError}
             />
           )}
 
@@ -175,15 +203,12 @@ export default function App() {
             <ResultsPage
               key="results-page"
               status={status}
-              riskScore={riskScore}
+              apiResult={apiResult}
               amount={amount}
-              transactionType={transactionType}
-              senderOldBalance={senderOldBalance}
-              senderNewBalance={senderNewBalance}
-              receiverOldBalance={receiverOldBalance}
-              receiverNewBalance={receiverNewBalance}
-              hour={hour}
-              balanceDiscrepancy={balanceDiscrepancy}
+              useChip={useChip}
+              errors={errors}
+              time={time}
+              apiError={apiError}
               onReAudit={() => setActiveTab('input')}
             />
           )}

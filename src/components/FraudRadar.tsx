@@ -1,21 +1,19 @@
-import { motion } from 'framer-motion';
-
 interface FraudRadarProps {
   status: 'idle' | 'loading' | 'safe' | 'fraud';
-  riskScore: number;
-  amount: number;
+  probability: number;
+  threshold: number;
+  amount: string;
+  customerKnown: boolean;
+  merchantKnown: boolean;
 }
-
-const fmt = (n: number) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-  }).format(n);
 
 export default function FraudRadar({
   status,
+  probability: _probability,
+  threshold,
   amount,
+  customerKnown,
+  merchantKnown,
 }: FraudRadarProps) {
   const isFraud = status === 'fraud';
 
@@ -24,46 +22,68 @@ export default function FraudRadar({
       {/* Header */}
       <div className="space-y-1">
         <h3 className="text-xs font-semibold uppercase tracking-wider text-[#78726A]">
-          Binary Decision Outcome
+          Model Inference Result
         </h3>
         <h2 className="font-serif text-2xl text-[#2C2A29]">
           {isFraud ? 'Flagged as High Risk Fraud' : 'Cleared as Safe Transaction'}
         </h2>
       </div>
 
-      {/* Decision Summary Card (Light Warm Style) */}
+      {/* Decision Summary Card */}
       <div className="border border-[#E6E1D8] p-6 space-y-5 bg-[#FAF7F2]">
         <div className="flex items-center justify-between border-b border-[#EDE9E1] pb-4">
           <span className="text-xs text-[#78726A] font-mono">MODEL VERDICT</span>
           <span className={`text-xs font-mono font-semibold ${isFraud ? 'text-[#B84A39]' : 'text-[#3B7A57]'}`}>
-            {isFraud ? '● CLASS 1 (FRAUD)' : '● CLASS 0 (SAFE)'}
+            {isFraud ? '● FRAUD DETECTED' : '● TRANSACTION SAFE'}
           </span>
         </div>
 
-        <div className="space-y-2">
+        {/* Key Info */}
+        <div className="space-y-2 pt-2">
           <div className="flex justify-between text-xs font-mono text-[#78726A]">
             <span>TRANSACTION AMOUNT</span>
-            <span className="text-[#2C2A29] font-medium">{fmt(amount)}</span>
+            <span className="text-[#2C2A29] font-medium">{amount}</span>
           </div>
           <div className="flex justify-between text-xs font-mono text-[#78726A]">
             <span>CLASSIFIER THRESHOLD</span>
-            <span className="text-[#2C2A29]">0.50</span>
+            <span className="text-[#2C2A29]">{(threshold * 100).toFixed(0)}% ({threshold.toFixed(2)})</span>
           </div>
           <div className="flex justify-between text-xs font-mono text-[#78726A]">
             <span>AUDIT ALGORITHM</span>
-            <span className="text-[#2C2A29]">XGBoost v1.2</span>
+            <span className="text-[#2C2A29]">GNN + XGBoost</span>
           </div>
         </div>
 
-        {/* Narrative Verdict Text */}
+        {/* Graph Connectivity Status */}
+        <div className="space-y-2 pt-2 border-t border-[#EDE9E1]">
+          <div className="flex justify-between text-xs font-mono text-[#78726A]">
+            <span>CUSTOMER IN GRAPH</span>
+            <span className={`font-semibold ${customerKnown ? 'text-[#3B7A57]' : 'text-[#A86B24]'}`}>
+              {customerKnown ? '● Known' : '○ Cold Start'}
+            </span>
+          </div>
+          <div className="flex justify-between text-xs font-mono text-[#78726A]">
+            <span>MERCHANT IN GRAPH</span>
+            <span className={`font-semibold ${merchantKnown ? 'text-[#3B7A57]' : 'text-[#A86B24]'}`}>
+              {merchantKnown ? '● Known' : '○ Cold Start'}
+            </span>
+          </div>
+        </div>
+
+        {/* Narrative Verdict */}
         <div className="pt-2 border-t border-[#EDE9E1] text-xs text-[#78726A] leading-relaxed">
           {isFraud ? (
             <p>
-              This transaction exhibits behavioral signatures highly correlated with PaySim fraud patterns. Key flags include complete account exhaustion and recipient balance anomalies.
+              This transaction exhibits behavioral signatures highly correlated with card fraud patterns.
+              Key graph-based and feature signals exceeded the decision boundary.
+              {!customerKnown && ' The customer is not in the training graph — cold-start risk applies.'}
+              {!merchantKnown && ' The merchant is unseen — limited graph context available.'}
             </p>
           ) : (
             <p>
-              No high-risk discrepancies detected. Sender balance and transaction amount follow expected routine peer-to-peer distribution curves.
+              No high-risk signals detected. The transaction profile matches known legitimate patterns
+              in the user–merchant interaction graph.
+              {customerKnown && merchantKnown && ' Both customer and merchant have established graph histories.'}
             </p>
           )}
         </div>

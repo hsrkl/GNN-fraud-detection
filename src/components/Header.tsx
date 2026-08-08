@@ -17,20 +17,7 @@ const TABS: { id: PageTab; label: string }[] = [
 export default function Header({ activeTab, onSelectTab, hasResult }: HeaderProps) {
   return (
     <header className="fixed top-0 left-0 w-full z-50 h-16 bg-[#F7F4EE]/90 backdrop-blur-md border-b border-[#E6E1D8] transition-all">
-      <div className="max-w-6xl mx-auto h-full px-6 flex items-center justify-between">
-        {/* Brand Wordmark */}
-        <button
-          onClick={() => onSelectTab('input')}
-          className="flex items-center gap-2.5 text-left group cursor-pointer border-none bg-transparent p-0"
-        >
-          <span className="text-lg">🛡️</span>
-          <div className="flex flex-col">
-            <span className="font-serif text-lg font-semibold tracking-tight text-[#2C2A29]">
-              Safeguard <span className="italic text-[#C85A32] font-normal">AI</span>
-            </span>
-          </div>
-        </button>
-
+      <div className="max-w-6xl mx-auto h-full px-6 flex items-center justify-center">
         {/* Text Navigation */}
         <nav className="flex items-center gap-8">
           {TABS.map((tab) => {
@@ -61,12 +48,6 @@ export default function Header({ activeTab, onSelectTab, hasResult }: HeaderProp
             );
           })}
         </nav>
-
-        {/* Quiet Status */}
-        <div className="hidden sm:flex items-center gap-2 text-xs text-[#78726A]">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#3B7A57]" />
-          <span className="font-mono text-[11px]">XGBoost v1.2</span>
-        </div>
       </div>
     </header>
   );
