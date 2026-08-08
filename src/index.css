@@ -1,0 +1,171 @@
+@import 'tailwindcss';
+
+:root {
+  --bg-paper: #F7F4EE;
+  --bg-subtle: #FAF7F2;
+  --bg-card: #FFFFFF;
+  
+  --text-main: #2C2A29;
+  --text-muted: #78726A;
+  --text-light: #A0988E;
+  
+  --border-hairline: #E6E1D8;
+  --border-subtle: #EDE9E1;
+  
+  --accent-terracotta: #C85A32;
+  --accent-terracotta-hover: #B24E2A;
+  --accent-terracotta-bg: #FAF0EC;
+  
+  --safe-green: #3B7A57;
+  --danger-red: #B84A39;
+  --anomaly-amber: #A86B24;
+
+  --font-serif: 'Newsreader', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  background-color: var(--bg-paper);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: var(--bg-paper);
+  color: var(--text-main);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Custom minimal scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-paper);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-hairline);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-light);
+}
+
+/* Editorial Typography Utilities */
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+.font-mono {
+  font-family: var(--font-mono);
+}
+
+/* Hairline dividers */
+.hairline-b {
+  border-bottom: 1px solid var(--border-hairline);
+}
+
+.hairline-t {
+  border-top: 1px solid var(--border-hairline);
+}
+
+.hairline-r {
+  border-right: 1px solid var(--border-hairline);
+}
+
+.hairline-l {
+  border-left: 1px solid var(--border-hairline);
+}
+
+/* Minimal Underline Inputs */
+input[type='text'],
+input[type='number'] {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-hairline);
+  border-radius: 0;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  padding: 8px 0;
+  outline: none;
+  transition: border-color 0.2s ease;
+  width: 100%;
+}
+
+input[type='text']:focus,
+input[type='number']:focus {
+  border-bottom-color: var(--accent-terracotta);
+  box-shadow: none;
+}
+
+/* Minimal Slider */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: var(--border-hairline);
+  outline: none;
+  cursor: pointer;
+}
+
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent-terracotta);
+  border: 2px solid var(--bg-paper);
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+input[type='range']::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: var(--accent-terracotta-hover);
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent-terracotta);
+  border: 2px solid var(--bg-paper);
+  cursor: pointer;
+}
+
+/* Remove number spinners */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+::selection {
+  background: rgba(200, 90, 50, 0.15);
+  color: var(--text-main);
+}
