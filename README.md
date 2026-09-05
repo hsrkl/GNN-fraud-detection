@@ -5,6 +5,10 @@ A transaction fraud detection pipeline combining a Heterogeneous Graph Neural Ne
 * **Primary:** [IBM Credit Card Transactions Dataset](https://www.kaggle.com/datasets/ealtman2019/credit-card-transactions) (24M+ transactions, highly imbalanced).
 * **Prototyping:** [PaySim Synthetic Mobile Money Dataset](https://www.kaggle.com/datasets/ealaxi/paysim1) (used for initial feature validation).
 
+## Inspiration
+
+The idea of using this approach was inspired by [this](https://lirias.kuleuven.be/retrieve/e7c009e4-971e-4d00-9097-9f96d80441d7) paper.
+
 ## System Architecture
 
 ```
